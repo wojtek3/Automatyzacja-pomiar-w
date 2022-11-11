@@ -77,14 +77,14 @@ def measure(startCurrent, endCurrent, stepSize, delay):
     df = pd.DataFrame(data, columns = ['prad', 'napiecie', 'power', 'setcurrent'])
     now = datetime.now()
     date_time = now.strftime("%m_%d_%Y %H-%M-%S")
-    df.to_csv("results" + date_time + ".csv", index=False)
+    df.to_csv("Wyniki/results" + date_time + ".csv", index=False)
     return data
 
 def main():
     ser.write(commandPC)
     tim.sleep(0.1)
     ser.write(commandON)
-    data = measure(100,4000,30,0.01)
+    data = measure(100,1000,30,0.01)
     plotCharacteristics(data)
 
 main()
