@@ -100,19 +100,19 @@ layout3=[[sg.Text('Parametry ogniwa:')],
         [sg.Text("Pole ogniwa[cm2]:")],
         [sg.Text("Liczba ogniw:")],
         [sg.Text("")]]
-inputs_3=[[sg.Text('')],[sg.InputText(size=(10,1),key='-POLE_OGNIWA-')],[sg.InputText(size=(10,1),key='-LICZBA_OGNIW-')],[sg.Text("")]]
+inputs_3=[[sg.Text('')],[sg.InputText(size=(10,1),key='-POLE_OGNIWA-', default_text = "153")],[sg.InputText(size=(10,1),key='-LICZBA_OGNIW-')],[sg.Text("")]]
 
 layout4=[[sg.Text('Parametry pomiaru:')],
         [sg.Text("Prąd maksymalny [A]:")],
         [sg.Text("Skok:")],
         [sg.Text("Natężenie [W/m^2]:")]]
 
-inputs_4=[[sg.Text('')],[sg.InputText(size=(10,1),key='-PRAD_MAX-')],[sg.InputText(size=(10,1),key='-SKOK-')],[sg.InputText(size=(10,1),key='-NATEZENIE-')]]
+inputs_4=[[sg.Text('')],[sg.InputText(size=(10,1),key='-PRAD_MAX-', default_text = "8000")],[sg.InputText(size=(10,1),key='-SKOK-', default_text = "100")],[sg.InputText(size=(10,1),key='-NATEZENIE-')]]
 
 layout_main=[[sg.Column(logo_column,justification="left"),sg.VSeperator(),sg.Column(layout2),sg.VSeperator(),sg.Column(layout3),sg.Column(inputs_3),sg.VSeperator(),sg.Column(layout4),sg.Column(inputs_4)],
         [sg.Canvas(size=(500,500),key="-CANVAS-")],
         [sg.Text("Parametry ogniwa",justification='left')],
-        [sg.Text("Sprawnosc=",justification='left')],[sg.Text("", size=(0, 1), key='OUTPUT')]]
+        [sg.Text("Sprawnosc=",justification='left'), sg.Text("", size=(0, 1), key='OUTPUT')]]
 
 
 
@@ -127,20 +127,25 @@ def main():
     while True:
         event,values=window.read()
         if event=='Rozpocznij pomiar':
-            data=pd.read_csv('prawe_przetarte_11_30_2022 11-39-38.csv')
+            # data=pd.read_csv('prawe_przetarte_11_30_2022 11-39-38.csv')
+            # answer=get_Characteristics(data)
+            # fig_agg.get_tk_widget().forget()
+            # fig_agg = draw_figure(window["-CANVAS-"].TKCanvas, answer)
+            # window.refresh()
+            # # wybor portu
+            global ser
+            try: ser
+            except: ser = serial.Serial(values["com"].device, 9600)
+            # window['OUTPUT'].update("test") # aktualizacja sprawnosci
+            # # rozpoczęcie pomiaru
+            ser.write(commandPC)
+            tim.sleep(0.1)
+            ser.write(commandON)
+            data = measure(1,int(values["-PRAD_MAX-"]),int(values["-SKOK-"]),0.1)
             answer=get_Characteristics(data)
             fig_agg.get_tk_widget().forget()
             fig_agg = draw_figure(window["-CANVAS-"].TKCanvas, answer)
             window.refresh()
-            # # wybor portu
-            # global ser = serial.Serial(values["com"].device, 9600)
-            # # rozpoczęcie pomiaru
-            # ser.write(commandPC)
-            # tim.sleep(0.1)
-            # ser.write(commandON)
-            # data = measure(100,maksymalny_prad,30,0.01)
-            #answer=get_Characteristics(data)
-
             pass
        
         if event=='Generuj raport PDF':
