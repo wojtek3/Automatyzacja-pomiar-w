@@ -66,11 +66,11 @@ def get_Characteristics(data):
 
     fig, ax1 = plt.subplots()
     ax1.plot(df["napiecie"], df["prad"], color = "red")
-    ax1.set_ylabel("Prąd", color = "red")
+    ax1.set_ylabel("Prąd [A]", color = "red")
     ax2 = ax1.twinx()
     ax2.plot(df["napiecie"], df["power"], color = "blue")
-    ax2.set_ylabel("Moc", color = "blue")
-    ax1.set_xlabel("Napiecie")
+    ax2.set_ylabel("Moc [W]", color = "blue")
+    ax1.set_xlabel("Napiecie [V]")
     fig.savefig('test.png')
     return fig
 
@@ -97,13 +97,16 @@ def save_csv(data):
     date_time = now.strftime("%m_%d_%Y %H-%M-%S")
     df.to_csv("Wyniki/results" + date_time + ".csv", index=False)
 
-def get_mppt(data):
+def get_params(data):
     powerData = list(data["power"])
     MPPTPower = max(powerData)
     MPPTIndex = powerData.index(MPPTPower)
     MPPTVoltage = data["napiecie"][MPPTIndex]
     MPPTCurrent = data["prad"][MPPTIndex]
-    return MPPTPower,MPPTVoltage,MPPTCurrent
+    Voc = data["napiecie"][0]
+    datalen = len(powerData)
+    Isc = data["prad"][datalen-1]
+    return MPPTPower,MPPTVoltage,MPPTCurrent,Voc,Isc
 
 #---------------------------
 def caluclate_efficiency(pole,liczba_ogniw,natezenie_swiatla,moc_mppt):
@@ -141,9 +144,10 @@ inputs_4=[[sg.Text('')],[sg.InputText(size=(10,1),key='-PRAD_MAX-', default_text
 
 layout_main=[[sg.Column(logo_column,justification="left"),sg.VSeperator(),sg.Column(layout2),sg.VSeperator(),sg.Column(layout3),sg.Column(inputs_3),sg.VSeperator(),sg.Column(layout4),sg.Column(inputs_4)],
         [sg.Canvas(size=(500,500),key="-CANVAS-")],
-        [sg.Text("Parametry ogniwa",justification='left')],
+        [sg.Text("Parametry modułu",justification='left')],
         [sg.Text("Sprawnosc=",justification='left'), sg.Text("", size=(0, 1), key='OUTPUT')],
-        [sg.Text("MPPT: ",justification='left'), sg.Text("", size=(0, 1), key='MPPT')],
+        [sg.Text("", size=(0, 1), key='MPPT')],
+        [sg.Text("", size=(0, 1), key='VOC-ISC')],
         [sg.Text("Czas pomiaru: ",justification='left'), sg.Text("", size=(0, 1), key='M_TIME')]]
 
 
@@ -160,8 +164,8 @@ def main():
         if event=='Rozpocznij pomiar':
 
             ########### DO TESTU ŁADUJĘ STARE PRZYKŁADOWE DANE
-            data=pd.read_csv('prawe_przetarte_11_30_2022 11-39-38.csv')
-            measureTime = 12.3
+            # data=pd.read_csv('prawe_przetarte_11_30_2022 11-39-38.csv')
+            # measureTime = 12.3
             ###########
 
             # # wybor portu
@@ -173,14 +177,15 @@ def main():
             tim.sleep(0.1)
             ser.write(commandON)
 
-            # data, measureTime = measure(1,int(values["-PRAD_MAX-"]),int(values["-SKOK-"]),0.1)
+            data, measureTime = measure(1,int(values["-PRAD_MAX-"]),int(values["-SKOK-"]),0.1)
             answer=get_Characteristics(data)
             fig_agg.get_tk_widget().forget()
             fig_agg = draw_figure(window["-CANVAS-"].TKCanvas, answer)
             
 
-            MPPTPower,MPPTVoltage,MPPTCurrent = get_mppt(data)
-            window['MPPT'].update("Pmax = " + str(MPPTPower) + "W, U = " + str(MPPTVoltage) + "V, I = " + str(MPPTCurrent) + "A")
+            MPPTPower,MPPTVoltage,MPPTCurrent,Voc,Isc = get_params(data)
+            window['MPPT'].update("Pmmp = " + str(MPPTPower) + "W, Vmmp = " + str(MPPTVoltage) + "V, Immp = " + str(MPPTCurrent) + "A")
+            window["VOC-ISC"].update("Voc = " + str(Voc) + "V Isc = " + str(Isc) + "A")
 
             efficiency = caluclate_efficiency(float(values["-POLE_OGNIWA-"]), float(values["-LICZBA_OGNIW-"]), float(values["-NATEZENIE-"]), MPPTPower)
             window['OUTPUT'].update(f'{efficiency:.2f}%') # aktualizacja sprawnosci
@@ -197,22 +202,26 @@ def main():
 
             pdf.set_xy(40,20)
             pdf.set_font("Arial", "B", 14)
-            pdf.cell(0,txt = "RAPORT Z POMIARU OGNIW PV, AGH SOLAR PLANE")
+            pdf.cell(0,txt = "RAPORT Z POMIARU MODULU PV, AGH SOLAR PLANE")
 
+            # pdf.set_xy(40,160)
+            # pdf.set_font("Arial", "B", 12)
+            # pdf.cell(0,txt = "MPPT:")
             pdf.set_xy(40,160)
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0,txt = "MPPT:")
-            pdf.set_xy(60,160)
             pdf.set_font("Arial", "", 12)
-            pdf.cell(0,txt = "Pmax = " + str(MPPTPower) + "W")
-            pdf.set_xy(60,165)
-            pdf.cell(0,txt = "U = " + str(MPPTVoltage) + "V")
-            pdf.set_xy(60,170)
-            pdf.cell(0,txt = "I = " + str(MPPTCurrent) + "A")
+            pdf.cell(0,txt = "Pmmp = " + str(MPPTPower) + "W")
+            pdf.set_xy(40,165)
+            pdf.cell(0,txt = "Vmmp = " + str(MPPTVoltage) + "V")
+            pdf.set_xy(40,170)
+            pdf.cell(0,txt = "Immp = " + str(MPPTCurrent) + "A")
+            pdf.set_xy(40,175)
+            pdf.cell(0,txt = "Voc = " + str(Voc) + "V")
+            pdf.set_xy(40,180)
+            pdf.cell(0,txt = "Isc = " + str(Isc) + "A")
 
             pdf.set_xy(120,160)
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(0,txt = "Parametry pomiaru")
+            pdf.cell(0,txt = "Warunki pomiaru")
             pdf.set_xy(120,165)
             pdf.set_font("Arial", "", 12)
             pdf.cell(0,txt = "Natezenie swiatla = " + str(values["-NATEZENIE-"]) + "W/m2")
@@ -221,12 +230,19 @@ def main():
             pdf.set_xy(120,175)
             pdf.cell(0,txt = "liczba ogniw = " + str(values["-LICZBA_OGNIW-"]))
 
-            pdf.set_xy(40,185)
+            pdf.set_xy(40,190)
             pdf.set_font("Arial", "B", 12)
             pdf.cell(0,txt = "Sprawnosc:")
-            pdf.set_xy(70,185)
+            pdf.set_xy(70,190)
             pdf.set_font("Arial", "", 12)
             pdf.cell(0,txt = f'{efficiency:.2f}%')
+
+            pdf.set_xy(40,200)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0,txt = "Czas trwania pomiaru:")
+            pdf.set_xy(90,200)
+            pdf.set_font("Arial", "", 12)
+            pdf.cell(0,txt = f'{measureTime:.2f}s')
 
             pdf.output('test.pdf','F')
 
