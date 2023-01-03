@@ -44,15 +44,33 @@ def writeCurrent(current):
     setCommand.append(checksum)
     ser.write(setCommand)
 
+# def get_Characteristics(data):
+#     df = pd.DataFrame(data, columns = ['prad', 'napiecie', 'power','setcurrent'])
+#     answer=plt.figure()
+#     plt.plot(df['napiecie'], df['prad'])
+#     plt.plot(df['napiecie'], df['power'])
+#     plt.title("Charakterystyka I-U, P-U")
+#     plt.xlabel("Napięcie [V]")
+#     plt.ylabel("Prąd [A]")
+#     return answer
+
 def get_Characteristics(data):
     df = pd.DataFrame(data, columns = ['prad', 'napiecie', 'power','setcurrent'])
-    answer=plt.figure()
-    plt.plot(df['napiecie'], df['prad'])
-    plt.plot(df['napiecie'], df['power'])
-    plt.title("Charakterystyka I-U, P-U")
-    plt.xlabel("Napięcie [V]")
-    plt.ylabel("Prąd [A]")
-    return answer
+    # answer=plt.figure()
+    # plt.plot(df['napiecie'], df['prad'])
+    # plt.plot(df['napiecie'], df['power'])
+    # plt.title("Charakterystyka I-U, P-U")
+    # plt.xlabel("Napięcie [V]")
+    # plt.ylabel("Prąd [A]")
+
+    fig, ax1 = plt.subplots()
+    ax1.plot(df["napiecie"], df["prad"], color = "red")
+    ax1.set_ylabel("Prąd", color = "red")
+    ax2 = ax1.twinx()
+    ax2.plot(df["napiecie"], df["power"], color = "blue")
+    ax2.set_ylabel("Moc", color = "blue")
+    fig.savefig('test.png')
+    return fig
 
 def measure(startCurrent, endCurrent, stepSize, delay):
     data = []
@@ -67,12 +85,15 @@ def measure(startCurrent, endCurrent, stepSize, delay):
         
     writeCurrent(0)
     stopTime = int(tim.time() * 1000)
-    print("Czas pomiaru: " + str(stopTime-startTime) + "ms")
+    measureTime = stopTime-startTime
+    print("Czas pomiaru: " + str(measureTime) + "ms")
+    return data,measureTime
+
+def save_csv(data):
     df = pd.DataFrame(data, columns = ['prad', 'napiecie', 'power', 'setcurrent'])
     now = datetime.now()
     date_time = now.strftime("%m_%d_%Y %H-%M-%S")
     df.to_csv("Wyniki/results" + date_time + ".csv", index=False)
-    return data
 
 def get_mppt(data):
     powerData = list(data["power"])
@@ -120,8 +141,8 @@ layout_main=[[sg.Column(logo_column,justification="left"),sg.VSeperator(),sg.Col
         [sg.Canvas(size=(500,500),key="-CANVAS-")],
         [sg.Text("Parametry ogniwa",justification='left')],
         [sg.Text("Sprawnosc=",justification='left'), sg.Text("", size=(0, 1), key='OUTPUT')],
-        [sg.Text("MPPT: ",justification='left'), sg.Text("", size=(0, 1), key='MPPT')]]
-
+        [sg.Text("MPPT: ",justification='left'), sg.Text("", size=(0, 1), key='MPPT')],
+        [sg.Text("Czas pomiaru: ",justification='left'), sg.Text("", size=(0, 1), key='M_TIME')]]
 
 
 def main():
@@ -135,7 +156,12 @@ def main():
     while True:
         event,values=window.read()
         if event=='Rozpocznij pomiar':
-            # data=pd.read_csv('prawe_przetarte_11_30_2022 11-39-38.csv')
+
+            ########### DO TESTU ŁADUJĘ STARE PRZYKŁADOWE DANE
+            data=pd.read_csv('prawe_przetarte_11_30_2022 11-39-38.csv')
+            measureTime = 12.3
+            ###########
+
             # # wybor portu
             global ser
             try: ser
@@ -145,7 +171,7 @@ def main():
             tim.sleep(0.1)
             ser.write(commandON)
 
-            data = measure(1,int(values["-PRAD_MAX-"]),int(values["-SKOK-"]),0.1)
+            # data, measureTime = measure(1,int(values["-PRAD_MAX-"]),int(values["-SKOK-"]),0.1)
             answer=get_Characteristics(data)
             fig_agg.get_tk_widget().forget()
             fig_agg = draw_figure(window["-CANVAS-"].TKCanvas, answer)
@@ -156,6 +182,7 @@ def main():
 
             efficiency = caluclate_efficiency(float(values["-POLE_OGNIWA-"]), float(values["-LICZBA_OGNIW-"]), float(values["-NATEZENIE-"]), MPPTPower)
             window['OUTPUT'].update(f'{efficiency:.2f}%') # aktualizacja sprawnosci
+            window['M_TIME'].update(f'{measureTime:.2f}s')
 
             window.refresh()
             pass
@@ -164,7 +191,7 @@ def main():
             #TODO zaimplementować generowanie i zapis raportu
             pass
         if event=='Zapisz jako CSV':
-            #TODO zaimplementować zapis
+            save_csv(data)
             pass
 
         elif event == sg.WIN_CLOSED:
