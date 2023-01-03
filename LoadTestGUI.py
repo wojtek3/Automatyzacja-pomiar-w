@@ -6,6 +6,7 @@ from datetime import date, time, datetime
 import PySimpleGUI as sg 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import serial.tools.list_ports
+from fpdf import FPDF
 
 sg.theme('SystemDefault1')
 # ser = serial.Serial("COM7", 9600) 
@@ -69,6 +70,7 @@ def get_Characteristics(data):
     ax2 = ax1.twinx()
     ax2.plot(df["napiecie"], df["power"], color = "blue")
     ax2.set_ylabel("Moc", color = "blue")
+    ax1.set_xlabel("Napiecie")
     fig.savefig('test.png')
     return fig
 
@@ -188,7 +190,46 @@ def main():
             pass
        
         if event=='Generuj raport PDF':
-            #TODO zaimplementować generowanie i zapis raportu
+
+            pdf=FPDF(format='A4')
+            pdf.add_page()
+            pdf.image("test.png",x = 25, y = 20, w = 160, h = 120)
+
+            pdf.set_xy(40,20)
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(0,txt = "RAPORT Z POMIARU OGNIW PV, AGH SOLAR PLANE")
+
+            pdf.set_xy(40,160)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0,txt = "MPPT:")
+            pdf.set_xy(60,160)
+            pdf.set_font("Arial", "", 12)
+            pdf.cell(0,txt = "Pmax = " + str(MPPTPower) + "W")
+            pdf.set_xy(60,165)
+            pdf.cell(0,txt = "U = " + str(MPPTVoltage) + "V")
+            pdf.set_xy(60,170)
+            pdf.cell(0,txt = "I = " + str(MPPTCurrent) + "A")
+
+            pdf.set_xy(120,160)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0,txt = "Parametry pomiaru")
+            pdf.set_xy(120,165)
+            pdf.set_font("Arial", "", 12)
+            pdf.cell(0,txt = "Natezenie swiatla = " + str(values["-NATEZENIE-"]) + "W/m2")
+            pdf.set_xy(120,170)
+            pdf.cell(0,txt = "Pole ogniwa = " + str(values["-POLE_OGNIWA-"]) + "cm2")
+            pdf.set_xy(120,175)
+            pdf.cell(0,txt = "liczba ogniw = " + str(values["-LICZBA_OGNIW-"]))
+
+            pdf.set_xy(40,185)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0,txt = "Sprawnosc:")
+            pdf.set_xy(70,185)
+            pdf.set_font("Arial", "", 12)
+            pdf.cell(0,txt = f'{efficiency:.2f}%')
+
+            pdf.output('test.pdf','F')
+
             pass
         if event=='Zapisz jako CSV':
             save_csv(data)
